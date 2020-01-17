@@ -23,3 +23,13 @@ export function orderList(floor, number) {
     }
   })
 }
+
+export function selectSeat(id, begin, end, user) {
+  return request({
+    url: '/lib/selectSeat',
+    method: 'put',
+    params: {
+     id,begin,end,user
+    }
+  })
+}

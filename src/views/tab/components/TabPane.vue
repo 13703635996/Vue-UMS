@@ -158,7 +158,6 @@
     </div>
     <!--选座弹窗-->
     <el-dialog title="座位确认" :visible.sync="dialogFormVisible" style="width: 70%;margin: 0 auto">
-      <span>{{seatInfo.seatId}}</span>---<span>{{user.name}}</span>
       <el-form ref="dataForm" :model="seatInfo" label-position="left" label-width="75px"
                style="width: 40%; margin-left:50px;">
         <el-form-item label="座位编号:">
@@ -180,16 +179,16 @@
       <el-form ref="dataForm" :model="seatInfo" label-position="left" label-width="75px"
                style="width: 40%; margin-left:50px;">
         <el-form-item label="有效时间:">
-          <span>{{seatInfo.beginTime | formatDate}} ~ {{seatInfo.endTime | formatDate2}}</span>
+          <span id="begin">{{seatInfo.beginTime | formatDate}}</span> ~ <span id="end">{{seatInfo.endTime | formatDate2}}</span>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">
           Cancel
         </el-button>
-        <!--        <el-button type="primary" @click="dialogStatus=='create'?createData():updateData()">-->
-        <!--          Confirm-->
-        <!--        </el-button>-->
+        <el-button type="primary" @click="seatSelection()">
+          Confirm
+        </el-button>
       </div>
     </el-dialog>
   </div>
@@ -220,7 +219,7 @@
 </style>
 <script>
   import { mapGetters } from 'vuex'
-  import { seatList, orderList } from '@/api/seats'
+  import { seatList, orderList, selectSeat } from '@/api/seats'
   import Tab from '../index'
 
   export default {
@@ -234,25 +233,25 @@
         }
         return statusMap[status]
       },
-      formatDate: function (value) {
-        let date = new Date(value);
-        let h = date.getHours();
-        h = h < 10 ? ('0' + h) : h;
-        let m = date.getMinutes();
-        m = m < 10 ? ('0' + m) : m;
-        let s = date.getSeconds();
-        s = s < 10 ? ('0' + s) : s;
-        return h + ':' + m + ':' + s;
+      formatDate: function(value) {
+        let date = new Date(value)
+        let h = date.getHours()
+        h = h < 10 ? ('0' + h) : h
+        let m = date.getMinutes()
+        m = m < 10 ? ('0' + m) : m
+        let s = date.getSeconds()
+        s = s < 10 ? ('0' + s) : s
+        return h + ':' + m + ':' + s
       },
-      formatDate2: function (value) {
-        let date = new Date(value);
-        let h = date.getHours();
-        h = h < 10 ? ('3' + h) : h+3;
-        let m = date.getMinutes();
-        m = m < 10 ? ('0' + m) : m;
-        let s = date.getSeconds();
-        s = s < 10 ? ('0' + s) : s;
-        return h + ':' + m + ':' + s;
+      formatDate2: function(value) {
+        let date = new Date(value)
+        let h = date.getHours()
+        h = h < 10 ? ('3' + h) : h + 3
+        let m = date.getMinutes()
+        m = m < 10 ? ('0' + m) : m
+        let s = date.getSeconds()
+        s = s < 10 ? ('0' + s) : s
+        return h + ':' + m + ':' + s
       }
 
     },
@@ -285,7 +284,9 @@
           seatPosition: null,
           beginTime: null,
           endTime: null
-        }
+        },
+        begin: null,
+        end: null
 
       }
     },
@@ -309,10 +310,15 @@
       }
       this.getSeats()
     },
+    mounted(){
+      window.setInterval(() => {
+        setTimeout(this.getSeatsAgain(), 0)
+      }, 1000*60*2)
+    },
     methods: {
       getUser() {
         this.user = {
-          name: this.name,
+          name: this.name
         }
       },
       tableRowClassName({ row }) {
@@ -344,7 +350,6 @@
         })
       },
       getSeats() {
-        debugger
         this.loading = true
         seatList(this.floor, 1, 0).then(response => {
           this.list = response.data.seats
@@ -380,6 +385,64 @@
               this.loading = false
             }, 1 * 1000)
           })
+      },
+      getSeatsAgain() {
+        seatList(this.floor, 1, 0).then(response => {
+          this.list = response.data.seats
+        }),
+          seatList(this.floor, 0, 0).then(response => {
+            this.list2 = response.data.seats
+          }),
+          seatList(this.floor, 1, 40).then(response => {
+            this.list9 = response.data.seats
+          }),
+          seatList(this.floor, 0, 40).then(response => {
+            this.list10 = response.data.seats
+          }),
+          orderList(this.floor, 20).then(response => {
+            this.list3 = response.data.seats
+          }),
+          orderList(this.floor, 30).then(response => {
+            this.list4 = response.data.seats
+          }),
+          orderList(this.floor, 40).then(response => {
+            this.list5 = response.data.seats
+          })
+          ,
+          orderList(this.floor, 50).then(response => {
+            this.list6 = response.data.seats
+          }),
+          orderList(this.floor, 60).then(response => {
+            this.list7 = response.data.seats
+          }),
+          orderList(this.floor, 70).then(response => {
+            this.list8 = response.data.seats
+          })
+      },
+      seatSelection() {
+        this.dialogFormVisible = false
+        this.loading = true
+        let begin = document.querySelector('#begin').innerHTML
+        let end = document.querySelector('#end').innerHTML
+        selectSeat(this.seatInfo.seatId, begin, end, this.user.name).then(response => {
+          let res = response.data.result
+          if (res === true){
+            this.$notify({
+              title: 'Result',
+              message: 'Selection Successfully',
+              type: 'success',
+              duration: 2000
+            })
+          }else {
+            this.$notify({
+              title: 'Result',
+              message: 'Seat selection failure',
+              type: 'error',
+              duration: 2000
+            })
+          }
+          this.getSeats()
+        })
       }
     }
   }
